@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using tuipos;
+using tuipos.Data;
+using tuipos.Models;
 
 using var db = new PosDbContext();
 
