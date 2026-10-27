@@ -1,31 +1,17 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using tuipos.Data;
-using tuipos.Models;
 
 using var db = new PosDbContext();
 
+// The database must have the current schema before seeding.
 await db.Database.MigrateAsync();
 
-const string barcode = "012345678901";
+await DbSeeder.SeedAsync(db);
 
-var item = await db.Items
-    .SingleOrDefaultAsync(i => i.Barcode == barcode);
+Console.WriteLine("Database seeded.");
 
-if (item is null)
-{
-    item = new Item
-    {
-        Barcode = barcode,
-        Name = "Coffee",
-        PriceCents = 599
-    };
+var itemCount = await db.Items.CountAsync();
+var userCount = await db.Users.CountAsync();
 
-    db.Items.Add(item);
-    await db.SaveChangesAsync();
-
-    Console.WriteLine("Created test item.");
-}
-
-Console.WriteLine(
-    $"{item.Name}: ${item.PriceCents / 100m:F2} " +
-    $"(barcode: {item.Barcode})");
+Console.WriteLine($"Users: {userCount}");
+Console.WriteLine($"Items: {itemCount}");
