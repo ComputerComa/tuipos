@@ -2,7 +2,8 @@ namespace tuipos.UI;
 
 // IBM-style message text. IDs are grouped by screen:
 // TPS00xx sign-on, TPS01xx menus, TPS02xx register, TPS03xx payment,
-// TPS04xx users, TPS05xx items, TPS06xx change PIN, TPS09xx shared.
+// TPS04xx users, TPS05xx items, TPS06xx change PIN, TPS07xx reports,
+// TPS09xx shared.
 public static class Messages
 {
     public const string UserIdRequired = "TPS0001 User ID must be entered.";
@@ -111,6 +112,16 @@ public static class Messages
         "TPS0604 New PIN must be different from the current PIN.";
 
     public const string PinChanged = "TPS0605 PIN changed.";
+
+    public static string SpooledFileCreated(int number, string name, int pages) =>
+        $"TPS0701 Spooled file {number} {name} created, {pages} {(pages == 1 ? "page" : "pages")}.";
+
+    public const string DateNotValid = "TPS0702 Type the date as MM/DD/YY.";
+
+    public const string DateRangeNotValid = "TPS0703 From date can't be after the to date.";
+
+    public static string SpooledFilesDeleted(int count) =>
+        count == 1 ? "TPS0704 1 spooled file deleted." : $"TPS0704 {count} spooled files deleted.";
 
     public static string OptionNotValid(string option) =>
         $"TPS0901 Option {option} not valid.";

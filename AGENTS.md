@@ -43,6 +43,8 @@ To reset local data, delete `pos.db` (it's gitignored) and run the app again.
 | `Data/DBSeeder.cs` | Idempotent seed data for empty tables: admin user `0000` and 20 grocery items |
 | `models/` | EF entities: `Item`, `PosUser`, `Sale`, `SaleItem` (the folder is lowercase, the namespace is `tuipos.Models`) |
 | `UI/` | One class per 5250-style screen, plus the shared building blocks described below |
+| `Reports/` | Report layouts (`ReportWriter` plus one class per report) and `SpoolStore`, which saves report output as spooled files |
+| `spool/` | Spooled files at runtime, next to `pos.db` (gitignored) |
 | `Migrations/` | EF Core migrations. Generated code, don't hand-edit. |
 
 Leave the odd file and folder names (`PosBdContext.cs`, `DBSeeder.cs`, `models/`)
@@ -155,8 +157,9 @@ Build new screens from these pieces instead of styling views one by one:
   and `Clear()` to empty it.
 - **`Messages`**: the catalog of IBM-style message text. IDs are `TPSnnnn` and
   each screen gets its own range: sign-on `00xx`, menus `01xx`, register
-  `02xx`, payment `03xx`, users `04xx`, items `05xx`, change PIN `06xx`, and
-  shared messages `09xx`. Give each new screen the next unused range.
+  `02xx`, payment `03xx`, users `04xx`, items `05xx`, change PIN `06xx`,
+  reports `07xx`, and shared messages `09xx`. Give each new screen the next
+  unused range.
 
 Every screen follows the same pattern. It's a class whose dependencies come in
 through the constructor, with a `Run(IApplication app)` method. That method
@@ -179,6 +182,30 @@ Other patterns to copy:
   to fix.
 - **Lists with an entry line**: `RegisterScreen` puts an `OptionList` under its
   barcode entry, and processes typed options before any new entry on Enter.
+
+## Reports and spooled files
+
+Reports work like IBM i printer output. A report never prints directly. It's
+saved as a spooled file, a plain text file in `spool/`, and then shown with
+`DisplaySpooledFileScreen`.
+
+- **`ReportWriter`** lays out pages like an IBM printer file: 132 columns, a
+  66-line form with overflow at line 60, the page heading (report ID, title,
+  page number, system, user, timestamp) on every page, `Subheading` and
+  `ColumnHeadings` repeated on each page, CRLF line endings, a form feed after
+  every page, and IBM's END OF LISTING line from `Finish()`. Keep report text
+  plain ASCII. The target printer is an Okidata Pacemark 4410 (wide carriage,
+  132 columns, Epson FX / IBM ProPrinter III / OKI Microline emulation), which
+  prints these files raw.
+- **One static class per report** in `Reports/`, with `Id` (up to 10 capital
+  letters or digits, e.g. `SLSJRN`), `Title`, and a `Build(...)` that returns a
+  `Report`. Use `SalesData.Between(db, from, to)` for sales in a date range,
+  and `SalesData.DateText` / `TimeText` for culture-independent dates.
+- **`SpoolStore`** saves files as `000001-ID-USER.txt` and reads the number,
+  report, user and page count (one form feed per page) back from them.
+- **To add a report:** write the report class, then add it to
+  `ReportsMenuScreen` with `RunDated(...)` (which shows `ReportPromptScreen`
+  for a date or date range) or `Spool(...)` if it takes no input.
 - **Pop-up windows**: `PaymentWindow` is a plain `Window` smaller than the
   screen, run with `app.Run` from inside the screen below it, which stays
   visible behind. Its dotted IBM border is drawn as full-width label rows added

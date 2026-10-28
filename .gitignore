@@ -486,3 +486,6 @@ $RECYCLE.BIN/
 pos.db
 pos.db-shm
 pos.db-wal
+
+# Saved report output (spooled files)
+spool/

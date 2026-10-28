@@ -35,6 +35,7 @@ Press F3 or Esc on the sign-on screen to quit.
 | F6 | Pay on the register, or create on a "Work with" list |
 | F9 | Retrieve a previous command (press again to go further back) |
 | F12 | Cancel: clears the command line or goes back a screen |
+| F19 / F20 | Shift a report left or right (Shift+F7 / Shift+F8, or the arrow keys) |
 | Esc | Quits on the sign-on screen. Everywhere else it acts like F12. |
 
 ## Main menu
@@ -45,10 +46,9 @@ Type an option number on the `===>` line and press Enter.
 | --- | --- |
 | 1 | Register |
 | 2 | Item inquiry *(coming soon)* |
-| 3 | Sales journal *(coming soon)* |
-| 4 | Daily totals *(coming soon)* |
-| 5 | Display user information |
-| 6 | Administration (administrators only) |
+| 3 | Reports |
+| 4 | Display user information |
+| 5 | Administration (administrators only) |
 | 90 | Sign off (`SIGNOFF` also works) |
 
 ## Register
@@ -65,9 +65,37 @@ Type an option number on the `===>` line and press Enter.
 
 Completed sales are saved to the `Sales` and `SaleItems` tables.
 
+## Reports
+
+Option 3 opens the `REPORTS` menu. Anyone signed on can use it.
+
+| Option | Report | Asks for |
+| --- | --- | --- |
+| 1 | Daily sales summary: totals by payment method and by cashier | A date |
+| 2 | Sales journal: every sale with its lines | A date range |
+| 3 | Sales by item: units and revenue, best sellers first | A date range |
+| 4 | Item price list | Nothing |
+| 5 | Work with spooled files | |
+
+Dates default to today and are typed as `MM/DD/YY`.
+
+Like IBM i printer output, each report is saved as a **spooled file** and
+then shown on screen. Spooled files are plain text in the `spool/` folder next
+to `pos.db`, named like `000003-SLSJRN-0000.txt` (number, report, user). They're
+laid out for continuous-form paper on a wide-carriage dot matrix printer:
+
+- 132 columns, 66-line pages with a heading on each page
+- A form feed after every page, and CRLF line endings
+- Plain ASCII, so any Epson FX, IBM ProPrinter or OKI Microline compatible
+  printer can print them raw
+
+On the report screen, PageUp and PageDown scroll, and F19/F20 (Shift+F7 and
+Shift+F8, or the Left and Right arrows) shift across the 132 columns. Work
+with spooled files lists them with `5=Display` and `4=Delete`.
+
 ## Administration
 
-Option 6 opens the `ADMIN` menu. Only administrators can open it; everyone
+Option 5 opens the `ADMIN` menu. Only administrators can open it; everyone
 else gets "Not authorized to Administration." F3 or F12 goes back to the main
 menu, and 90 signs off.
 
@@ -116,6 +144,7 @@ dotnet ef migrations add <Name>
 Program.cs      entry point: migrate, seed, then the sign-on → menu loop
 Data/           DbContext and seeder
 models/         EF Core entities
+Reports/        report layouts and the spooled file store
 UI/             one class per green-screen
 Migrations/     EF Core migrations
 ```
@@ -127,5 +156,6 @@ Migrations/     EF Core migrations
 - [x] Display user information
 - [x] Register (ring up a sale)
 - [x] Administration: users, items, change PIN, system status
+- [x] Reports saved as spooled files
+- [ ] Print spooled files to the dot matrix printer
 - [ ] Item inquiry
-- [ ] Sales journal and daily totals

@@ -4,7 +4,7 @@ using tuipos.Models;
 
 namespace tuipos.UI;
 
-// Main menu option 6, for administrators only.
+// Main menu option 5, for administrators only.
 public class AdminMenuScreen
 {
     private readonly PosDbContext _db;

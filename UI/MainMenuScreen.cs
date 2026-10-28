@@ -24,12 +24,17 @@ public class MainMenuScreen
 
         menu.AddOption(1, "Register", s => new RegisterScreen(_db, _user).Run(s.App));
         menu.AddOption(2, "Item inquiry", NotAvailable);
-        menu.AddOption(3, "Sales journal", NotAvailable);
-        menu.AddOption(4, "Daily totals", NotAvailable);
-        menu.AddOption(5, "Display user information", s => new UserInfoScreen(_user, signedOnAt).Run(s.App));
-        menu.AddOption(6, "Administration", OpenAdministration);
+        menu.AddOption(3, "Reports", OpenReports);
+        menu.AddOption(4, "Display user information", s => new UserInfoScreen(_user, signedOnAt).Run(s.App));
+        menu.AddOption(5, "Administration", OpenAdministration);
 
         menu.Run(app);
+    }
+
+    private void OpenReports(MenuSelection selection)
+    {
+        var result = new ReportsMenuScreen(_db, _user).Run(selection.App);
+        selection.SignOff = result == MenuResult.SignOff;
     }
 
     private void OpenAdministration(MenuSelection selection)
