@@ -9,28 +9,26 @@ public static class DbSeeder
     public static async Task SeedAsync(PosDbContext db)
     {
         await SeedUserAsync(db);
+        await EnsureAdminAsync(db);
         await SeedItemsAsync(db);
 
         await db.SaveChangesAsync();
     }
 
+    // Only seeds an empty table, so users deleted in WRKUSR stay deleted.
     private static async Task SeedUserAsync(PosDbContext db)
     {
-        const string userId = "0000";
-
-        var userExists = await db.Users
-            .AnyAsync(user => user.UserId == userId);
-
-        if (userExists)
+        if (await db.Users.AnyAsync())
         {
             return;
         }
 
         var user = new PosUser
         {
-            UserId = userId,
+            UserId = "0000",
             FirstName = "Local",
             LastName = "Admin",
+            IsAdmin = true
         };
 
         var hasher = new PasswordHasher<PosUser>();
@@ -39,8 +37,33 @@ public static class DbSeeder
         db.Users.Add(user);
     }
 
+    // Databases from before IsAdmin existed have no admins, which would
+    // lock everyone out of Administration. Promote the first user.
+    private static async Task EnsureAdminAsync(PosDbContext db)
+    {
+        if (await db.Users.AnyAsync(user => user.IsAdmin))
+        {
+            return;
+        }
+
+        var firstUser = await db.Users
+            .OrderBy(user => user.Id)
+            .FirstOrDefaultAsync();
+
+        if (firstUser is not null)
+        {
+            firstUser.IsAdmin = true;
+        }
+    }
+
+    // Only seeds an empty table, so items deleted in WRKITM stay deleted.
     private static async Task SeedItemsAsync(PosDbContext db)
     {
+        if (await db.Items.AnyAsync())
+        {
+            return;
+        }
+
         var items = new List<Item>
         {
             new() { Barcode = "100000000001", Name = "Whole Milk - 1 gal",       PriceCents = 399 },
@@ -65,21 +88,6 @@ public static class DbSeeder
             new() { Barcode = "100000000020", Name = "Notebook",                  PriceCents = 199 }
         };
 
-        var barcodes = items.Select(item => item.Barcode).ToArray();
-
-        var existingBarcodes = await db.Items
-            .Where(item => barcodes.Contains(item.Barcode))
-            .Select(item => item.Barcode)
-            .ToListAsync();
-
-        var existing = existingBarcodes.ToHashSet();
-
-        foreach (var item in items)
-        {
-            if (!existing.Contains(item.Barcode))
-            {
-                db.Items.Add(item);
-            }
-        }
+        db.Items.AddRange(items);
     }
 }

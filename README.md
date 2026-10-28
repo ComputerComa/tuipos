@@ -31,7 +31,8 @@ Press F3 or Esc on the sign-on screen to quit.
 | --- | --- |
 | Enter | Submit the screen |
 | F3 | Exit. On the main menu this signs off. On the sign-on screen it quits. |
-| F6 | Pay (on the register) |
+| F5 | Refresh a list or status screen |
+| F6 | Pay on the register, or create on a "Work with" list |
 | F9 | Retrieve a previous command (press again to go further back) |
 | F12 | Cancel: clears the command line or goes back a screen |
 | Esc | Quits on the sign-on screen. Everywhere else it acts like F12. |
@@ -47,6 +48,7 @@ Type an option number on the `===>` line and press Enter.
 | 3 | Sales journal *(coming soon)* |
 | 4 | Daily totals *(coming soon)* |
 | 5 | Display user information |
+| 6 | Administration (administrators only) |
 | 90 | Sign off (`SIGNOFF` also works) |
 
 ## Register
@@ -63,18 +65,43 @@ Type an option number on the `===>` line and press Enter.
 
 Completed sales are saved to the `Sales` and `SaleItems` tables.
 
+## Administration
+
+Option 6 opens the `ADMIN` menu. Only administrators can open it; everyone
+else gets "Not authorized to Administration." F3 or F12 goes back to the main
+menu, and 90 signs off.
+
+| Option | Screen |
+| --- | --- |
+| 1 | Work with users |
+| 2 | Work with items |
+| 3 | Change PIN |
+| 4 | Display system status |
+
+The two "Work with" lists work like their IBM i namesakes. Type an option next
+to a row and press Enter: `2` to change it or `4` to delete it, which asks you
+to confirm first. Press F6 to create a new user or item.
+
+- **Users:** you can't delete the user you're signed on as, or a user who has
+  sales. At least one user must stay an administrator. A blank PIN on Change
+  keeps the current PIN.
+- **Items:** deleting an item doesn't change past sales, because each sale
+  line keeps its own copy of the name and price.
+
 ## Data
 
 The app uses SQLite through EF Core. Everything lives in `pos.db`:
 
-- **Users** have a user ID, a name, and a hashed six-digit PIN
+- **Users** have a user ID, a name, a hashed six-digit PIN, and an
+  administrator flag
 - **Items** have a name, a barcode, and a price
 - **Sales** and **SaleItems** store completed transactions. Line items keep a
   snapshot of the name and price at the time of sale.
 
 Prices are stored as integer cents (for example, `$3.99` is stored as `399`).
 
-To start over, delete `pos.db` and run the app again.
+Sample data only goes into empty tables, so users and items you delete stay
+deleted. To start over, delete `pos.db` and run the app again.
 
 ### Migrations
 
@@ -99,5 +126,6 @@ Migrations/     EF Core migrations
 - [x] Main menu
 - [x] Display user information
 - [x] Register (ring up a sale)
+- [x] Administration: users, items, change PIN, system status
 - [ ] Item inquiry
 - [ ] Sales journal and daily totals

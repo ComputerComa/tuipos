@@ -1,6 +1,4 @@
 using Terminal.Gui.App;
-using Terminal.Gui.Input;
-using Terminal.Gui.Views;
 using tuipos.Data;
 using tuipos.Models;
 
@@ -8,8 +6,6 @@ namespace tuipos.UI;
 
 public class MainMenuScreen
 {
-    private const int SignOffOption = 90;
-
     private readonly PosDbContext _db;
     private readonly PosUser _user;
 
@@ -24,126 +20,32 @@ public class MainMenuScreen
     {
         var signedOnAt = DateTime.Now;
 
-        using GreenScreenWindow window = new("F3=Exit   F9=Retrieve   F12=Cancel");
+        var menu = new MenuScreen("MAIN", "TUIPOS Main Menu", _user, isInitialMenu: true);
 
-        GreenScreen.AddHeader(window.Grid, "MAIN", "TUIPOS Main Menu");
+        menu.AddOption(1, "Register", s => new RegisterScreen(_db, _user).Run(s.App));
+        menu.AddOption(2, "Item inquiry", NotAvailable);
+        menu.AddOption(3, "Sales journal", NotAvailable);
+        menu.AddOption(4, "Daily totals", NotAvailable);
+        menu.AddOption(5, "Display user information", s => new UserInfoScreen(_user, signedOnAt).Run(s.App));
+        menu.AddOption(6, "Administration", OpenAdministration);
 
-        TextField commandField = GreenScreen.InputField(6, 20, 72);
-
-        // Commands entered this session, for F9=Retrieve.
-        var history = new List<string>();
-        int historyIndex = 0;
-
-        void ProcessCommand()
-        {
-            string entry = (commandField.Text ?? "").Trim();
-
-            window.Message.Clear();
-
-            if (entry.Length == 0)
-            {
-                return;
-            }
-
-            history.Add(entry);
-            historyIndex = history.Count;
-
-            if (entry.Equals("SIGNOFF", StringComparison.OrdinalIgnoreCase))
-            {
-                app.RequestStop();
-                return;
-            }
-
-            if (!int.TryParse(entry, out int option))
-            {
-                // Leave the entry in place so it can be corrected.
-                window.Message.Error(Messages.SelectionNotValid);
-                return;
-            }
-
-            switch (option)
-            {
-                case 1:
-                    commandField.Text = "";
-                    new RegisterScreen(_db, _user).Run(app);
-                    break;
-
-                case 2:
-                case 3:
-                case 4:
-                    commandField.Text = "";
-                    window.Message.Show(Messages.OptionNotAvailable(option));
-                    break;
-
-                case 5:
-                    commandField.Text = "";
-                    new UserInfoScreen(_user, signedOnAt).Run(app);
-                    break;
-
-                case SignOffOption:
-                    app.RequestStop();
-                    break;
-
-                default:
-                    window.Message.Error(Messages.SelectionNotValid);
-                    break;
-            }
-        }
-
-        commandField.Accepting += (_, e) =>
-        {
-            e.Handled = true;
-            ProcessCommand();
-        };
-
-        window.KeyDown += (_, key) =>
-        {
-            if (key == Key.F3)
-            {
-                key.Handled = true;
-                app.RequestStop();
-            }
-            else if (key == Key.F9)
-            {
-                key.Handled = true;
-
-                if (history.Count > 0)
-                {
-                    historyIndex = Math.Max(0, historyIndex - 1);
-                    commandField.Text = history[historyIndex];
-                    commandField.MoveEnd();
-                }
-            }
-            else if (key == Key.F12 || key == Key.Esc)
-            {
-                // Esc acts like F12 so a stray press doesn't sign off.
-                key.Handled = true;
-                commandField.Text = "";
-                window.Message.Clear();
-            }
-        };
-
-        window.Grid.Add(
-            GreenScreen.Text(56, 2, "User:"),
-            GreenScreen.Text(66, 2, _user.UserId, GreenScreen.Bright),
-            GreenScreen.Text(1, 3, "Select one of the following:"),
-            Option(5, 1, "Register"),
-            Option(6, 2, "Item inquiry"),
-            Option(7, 3, "Sales journal"),
-            Option(8, 4, "Daily totals"),
-            Option(9, 5, "Display user information"),
-            Option(11, SignOffOption, "Sign off"),
-            GreenScreen.Text(1, 19, "Selection or command"),
-            GreenScreen.Text(1, 20, "===>", GreenScreen.Bright),
-            commandField
-        );
-
-        window.RunWithClock(app);
+        menu.Run(app);
     }
 
-    // A numbered menu line, e.g. "     5. Display user information".
-    private static Label Option(int y, int number, string text)
+    private void OpenAdministration(MenuSelection selection)
     {
-        return GreenScreen.Text(5, y, $"{number,2}. {text}");
+        if (!_user.IsAdmin)
+        {
+            selection.Message.Error(Messages.NotAuthorized("Administration"));
+            return;
+        }
+
+        var result = new AdminMenuScreen(_db, _user).Run(selection.App);
+        selection.SignOff = result == MenuResult.SignOff;
+    }
+
+    private static void NotAvailable(MenuSelection selection)
+    {
+        selection.Message.Show(Messages.OptionNotAvailable(selection.Option));
     }
 }

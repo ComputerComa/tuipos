@@ -15,7 +15,6 @@ public class RegisterScreen
     private const int MaxQuantity = 999;
     private const string RemoveOption = "4";
 
-    // The visible page of sale lines, like an IBM subfile page.
     private const int FirstLineRow = 11;
     private const int LinesPerPage = 8;
 
@@ -32,7 +31,6 @@ public class RegisterScreen
     public void Run(IApplication app)
     {
         var lines = new List<SaleLine>();
-        int topLine = 0;
 
         // F3 with a sale in progress only exits on the second press.
         bool exitWarned = false;
@@ -44,19 +42,7 @@ public class RegisterScreen
         TextField barcodeField = GreenScreen.InputField(27, 5, BarcodeLength, char.IsAsciiDigit);
         TextField quantityField = GreenScreen.InputField(60, 5, QuantityLength, char.IsAsciiDigit);
 
-        var optionFields = new TextField[LinesPerPage];
-        var lineLabels = new Label[LinesPerPage];
-
-        for (int slot = 0; slot < LinesPerPage; slot++)
-        {
-            optionFields[slot] = GreenScreen.InputField(2, FirstLineRow + slot, 1, char.IsAsciiDigit);
-
-            lineLabels[slot] = GreenScreen.Text(7, FirstLineRow + slot, "");
-            lineLabels[slot].Width = 72;
-        }
-
-        Label moreLabel = GreenScreen.Text(70, FirstLineRow + LinesPerPage, "");
-        moreLabel.Width = 9;
+        var lineList = new OptionList<SaleLine>(FirstLineRow, LinesPerPage, FormatLine, "(No items)");
 
         Label itemCountValue = GreenScreen.Text(69, 20, "", GreenScreen.Bright);
         itemCountValue.Width = 10;
@@ -68,24 +54,7 @@ public class RegisterScreen
 
         void ShowLines()
         {
-            for (int slot = 0; slot < LinesPerPage; slot++)
-            {
-                int index = topLine + slot;
-                bool used = index < lines.Count;
-
-                optionFields[slot].Text = "";
-                optionFields[slot].Visible = used;
-                lineLabels[slot].Text = used ? FormatLine(lines[index]) : "";
-            }
-
-            if (lines.Count == 0)
-            {
-                lineLabels[0].Text = "(No items)";
-            }
-
-            string more = topLine + LinesPerPage < lines.Count ? "More..." : "Bottom";
-            moreLabel.Text = lines.Count == 0 ? "" : more.PadLeft(9);
-
+            lineList.SetItems(lines);
             itemCountValue.Text = lines.Sum(line => line.Quantity).ToString().PadLeft(10);
             totalValue.Text = GreenScreen.Amount(Total()).PadLeft(10);
         }
@@ -94,12 +63,7 @@ public class RegisterScreen
         {
             barcodeField.Text = "";
             quantityField.Text = "";
-
-            foreach (var field in optionFields)
-            {
-                field.Text = "";
-            }
-
+            lineList.ClearOptions();
             window.Message.Clear();
             barcodeField.SetFocus();
         }
@@ -108,41 +72,28 @@ public class RegisterScreen
         // the same order a 5250 subfile program uses.
         bool ProcessOptions()
         {
-            var removed = new List<SaleLine>();
+            var typed = lineList.TypedOptions();
 
-            for (int slot = 0; slot < LinesPerPage; slot++)
+            foreach (var (_, option, field) in typed)
             {
-                string option = (optionFields[slot].Text ?? "").Trim();
-
-                if (option.Length == 0)
-                {
-                    continue;
-                }
-
                 if (option != RemoveOption)
                 {
                     window.Message.Error(Messages.LineOptionNotValid(option));
-                    optionFields[slot].SetFocus();
+                    field.SetFocus();
                     return false;
                 }
-
-                removed.Add(lines[topLine + slot]);
             }
 
-            if (removed.Count == 0)
+            if (typed.Count > 0)
             {
-                return true;
+                foreach (var (line, _, _) in typed)
+                {
+                    lines.Remove(line);
+                }
+
+                window.Message.Show(Messages.LinesRemoved(typed.Count));
             }
 
-            lines.RemoveAll(removed.Contains);
-
-            // Step back a page if the last one is now empty.
-            if (topLine >= lines.Count && topLine > 0)
-            {
-                topLine -= LinesPerPage;
-            }
-
-            window.Message.Show(Messages.LinesRemoved(removed.Count));
             return true;
         }
 
@@ -197,7 +148,8 @@ public class RegisterScreen
             quantityField.Text = "";
 
             // Show the page holding the line that changed.
-            topLine = lines.IndexOf(line) / LinesPerPage * LinesPerPage;
+            ShowLines();
+            lineList.ShowItem(line);
             return true;
         }
 
@@ -257,8 +209,11 @@ public class RegisterScreen
             _db.Sales.Add(sale);
             _db.SaveChanges();
 
+            // The context lives as long as the app, so don't keep entities
+            // tracked between screens.
+            _db.ChangeTracker.Clear();
+
             lines.Clear();
-            topLine = 0;
             ClearEntry();
             ShowLines();
 
@@ -280,14 +235,7 @@ public class RegisterScreen
             Submit();
         };
 
-        foreach (var field in optionFields)
-        {
-            field.Accepting += (_, e) =>
-            {
-                e.Handled = true;
-                Submit();
-            };
-        }
+        lineList.OnEnter(Submit);
 
         window.KeyDown += (_, key) =>
         {
@@ -321,22 +269,12 @@ public class RegisterScreen
             else if (key == Key.PageDown)
             {
                 key.Handled = true;
-
-                if (topLine + LinesPerPage < lines.Count)
-                {
-                    topLine += LinesPerPage;
-                    ShowLines();
-                }
+                lineList.PageDown();
             }
             else if (key == Key.PageUp)
             {
                 key.Handled = true;
-
-                if (topLine > 0)
-                {
-                    topLine -= LinesPerPage;
-                    ShowLines();
-                }
+                lineList.PageUp();
             }
         };
 
@@ -357,12 +295,10 @@ public class RegisterScreen
             GreenScreen.Text(7, 10, headings, GreenScreen.Bright)
         );
 
-        // Option fields go after the entry fields so Tab moves down the page.
-        window.Grid.Add(optionFields);
-        window.Grid.Add(lineLabels);
+        // Added after the entry fields so Tab moves down the page.
+        lineList.AddTo(window.Grid);
 
         window.Grid.Add(
-            moreLabel,
             GreenScreen.Text(46, 20, GreenScreen.DotLeader("Items", 19) + " :"),
             itemCountValue,
             GreenScreen.Text(46, 21, GreenScreen.DotLeader("Total", 19) + " :"),
@@ -378,9 +314,7 @@ public class RegisterScreen
     // One sale line, e.g. "100000000001  Whole Milk - 1 gal   2   3.99   7.98".
     private static string FormatLine(SaleLine line)
     {
-        string name = line.Item.Name.Length > 30 ? line.Item.Name[..30] : line.Item.Name;
-
-        return $"{line.Item.Barcode,-13} {name,-30} {line.Quantity,4}  "
+        return $"{line.Item.Barcode,-13} {GreenScreen.Clip(line.Item.Name, 30),-30} {line.Quantity,4}  "
             + $"{GreenScreen.Amount(line.Item.PriceCents),9}  "
             + $"{GreenScreen.Amount(line.AmountCents),10}";
     }

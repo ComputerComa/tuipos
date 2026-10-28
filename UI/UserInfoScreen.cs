@@ -44,6 +44,7 @@ public class UserInfoScreen
                 PromptWidth,
                 GreenScreen.Timestamp(_signedOnAt)
             ),
+            GreenScreen.OutputLine(1, 8, "Administrator", PromptWidth, GreenScreen.YesNo(_user.IsAdmin)),
             GreenScreen.Text(1, 20, "Press Enter to continue.")
         );
 

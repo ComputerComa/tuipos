@@ -106,6 +106,29 @@ public static class GreenScreen
         return true;
     }
 
+    // Cuts text to fit a list column.
+    public static string Clip(string text, int length)
+    {
+        return text.Length > length ? text[..length] : text;
+    }
+
+    // IBM i special values for yes/no fields.
+    public static string YesNo(bool value)
+    {
+        return value ? "*YES" : "*NO";
+    }
+
+    // Accepts *YES, YES or Y and *NO, NO or N, in any case.
+    public static bool? ParseYesNo(string text)
+    {
+        return text.Trim().TrimStart('*').ToUpperInvariant() switch
+        {
+            "YES" or "Y" => true,
+            "NO" or "N" => false,
+            _ => null
+        };
+    }
+
     // Pads a prompt with ". . ." out to width, e.g. "User  . . . . . .".
     // Dots sit on the same columns for every prompt of the same width.
     public static string DotLeader(string prompt, int width)

@@ -26,7 +26,9 @@ dotnet tool restore   # installs dotnet-ef locally
 ```
 
 On startup the app migrates the database and seeds it. The seeder is idempotent,
-so running it again is safe.
+so running it again is safe. It only seeds empty tables, so users and items
+deleted in Administration stay deleted. It also makes sure at least one user is
+an administrator, promoting the first user if none is.
 
 Seeded sign-on: user `0000`, PIN `123456`.
 
@@ -38,7 +40,7 @@ To reset local data, delete `pos.db` (it's gitignored) and run the app again.
 | --- | --- |
 | `Program.cs` | Entry point: migrates and seeds, creates the `IApplication`, then runs a sign-on → main menu loop |
 | `Data/PosBdContext.cs` | `PosDbContext` (the filename has a typo, the class name doesn't) |
-| `Data/DBSeeder.cs` | Idempotent seed data: one admin user and 20 grocery items |
+| `Data/DBSeeder.cs` | Idempotent seed data for empty tables: admin user `0000` and 20 grocery items |
 | `models/` | EF entities: `Item`, `PosUser`, `Sale`, `SaleItem` (the folder is lowercase, the namespace is `tuipos.Models`) |
 | `UI/` | One class per 5250-style screen, plus the shared building blocks described below |
 | `Migrations/` | EF Core migrations. Generated code, don't hand-edit. |
@@ -55,6 +57,13 @@ alone unless you're asked to rename them.
   for stored amounts. Format to dollars only for display.
 - `SaleItem` holds snapshot values (name, barcode, price), so sales history
   survives later catalog edits. Keep it that way.
+- `PosUser.IsAdmin` controls access to the Administration menu. Keep at least
+  one administrator: WRKUSR and CHGUSR both refuse to remove the last one.
+- The `PosDbContext` lives for the whole app. Read with `AsNoTracking()`, and
+  call `ChangeTracker.Clear()` after saving (or use `ExecuteUpdate` /
+  `ExecuteDelete`), so entities don't stay tracked between screens.
+- SQLite can't compare `DateTimeOffset` values in a query. Filter by date in
+  memory after selecting the columns you need (see `SystemStatusScreen`).
 
 ## Terminal.Gui v2 notes
 
@@ -76,8 +85,9 @@ alone unless you're asked to rename them.
 - `TextField` has no `MaxLength`. Enforce lengths in `TextChanging` (which
   `GreenScreen.InputField` already does).
 - Setting `Visible = false` on a field also takes it out of the Tab order.
-- When a `TextField` gets focus again, its text is selected, so the next
-  keystroke replaces it.
+- When a `TextField` gains focus, its text is selected, so the next keystroke
+  replaces it. Calling `SetFocus()` on a field that already has focus doesn't
+  select anything.
 - `app.AddTimeout` returns `object?`. Pass that token to `app.RemoveTimeout`
   once the screen closes.
 - `Terminal.Gui.Drawing.Attribute` collides with `System.Attribute`, so always
@@ -126,11 +136,27 @@ Build new screens from these pieces instead of styling views one by one:
     "prompt `:` value" rows
   - `AddHeader(grid, screenId, title)`
   - `Timestamp(DateTime)`
+  - `Clip(text, length)` for list columns
+  - `YesNo(bool)` and `ParseYesNo(text)` for IBM's `*YES` / `*NO` values
+- **`MenuScreen`**: a numbered menu with the `===>` command line, F9=Retrieve,
+  `SIGNOFF` and option 90. Add options with `AddOption(number, text, handler)`.
+  The handler gets a `MenuSelection` with the app, the menu's message line and
+  the option number. With `isInitialMenu: true` (MAIN), F3 signs off. Submenus
+  (ADMIN) go back on F3 or F12 and return `MenuResult.SignOff` when the user
+  signs off from them, so the caller should set `selection.SignOff`.
+- **`OptionList<T>`**: a page of rows with a 1-character option field beside
+  each, like an IBM subfile. Call `SetItems`, `AddTo(grid)` (after any entry
+  fields so Tab moves down the page), and `OnEnter(submit)`. Then read
+  `TypedOptions()` in your submit handler, and call `PageUp()` / `PageDown()`
+  from your key handler. It shows "More..." or "Bottom" under the last row.
+- **`ConfirmDeleteScreen`**: IBM's "Confirm Delete" step for rows marked with
+  `4=Delete`. Returns true when the user presses Enter.
 - **`MessageLine`**: call `Show(text)` for information, `Error(text)` for errors,
   and `Clear()` to empty it.
 - **`Messages`**: the catalog of IBM-style message text. IDs are `TPSnnnn` and
-  each screen gets its own range: sign-on `00xx`, main menu `01xx`, register
-  `02xx`, payment `03xx`. Give each new screen the next unused range.
+  each screen gets its own range: sign-on `00xx`, menus `01xx`, register
+  `02xx`, payment `03xx`, users `04xx`, items `05xx`, change PIN `06xx`, and
+  shared messages `09xx`. Give each new screen the next unused range.
 
 Every screen follows the same pattern. It's a class whose dependencies come in
 through the constructor, with a `Run(IApplication app)` method. That method
@@ -142,10 +168,17 @@ screen returns to the menu. `UserInfoScreen` is the simplest example.
 
 Other patterns to copy:
 
-- **Lists** (IBM subfiles): `RegisterScreen` shows a page of rows as fixed
-  label slots, with a 1-character option field beside each row (`4=Remove`).
-  PageUp and PageDown move between pages, and "More..." or "Bottom" sits under
-  the last row. Options are processed before any new entry on Enter.
+- **Work with lists**: `WorkWithUsersScreen` and `WorkWithItemsScreen` show
+  the IBM layout: "Type options, press Enter.", the options legend in blue, the
+  `Opt` column, F5=Refresh and F6=Create. On Enter, they check every typed
+  option first, then handle 2=Change in order down the page, then confirm and
+  run 4=Delete.
+- **Prompt screens**: `UserEditScreen` and `ItemEditScreen` handle both Create
+  and Change ("Type choices, press Enter."). On Change, the key field (user ID
+  or barcode) is shown but can't be edited. Errors put the cursor on the field
+  to fix.
+- **Lists with an entry line**: `RegisterScreen` puts an `OptionList` under its
+  barcode entry, and processes typed options before any new entry on Enter.
 - **Pop-up windows**: `PaymentWindow` is a plain `Window` smaller than the
   screen, run with `app.Run` from inside the screen below it, which stays
   visible behind. Its dotted IBM border is drawn as full-width label rows added

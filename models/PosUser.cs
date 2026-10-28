@@ -13,5 +13,8 @@ public class PosUser
     // Store a password hash here, never the six-digit PIN itself.
     public string PinHash { get; set; } = "";
 
+    // Administrators can open the Administration menu.
+    public bool IsAdmin { get; set; }
+
     public ICollection<Sale> Sales { get; set; } = new List<Sale>();
 }
