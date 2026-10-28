@@ -35,7 +35,7 @@ public class RegisterScreen
         // F3 with a sale in progress only exits on the second press.
         bool exitWarned = false;
 
-        using GreenScreenWindow window = new("F3=Exit   F6=Pay   F12=Cancel");
+        using GreenScreenWindow window = new("F3=Exit   F4=Prompt   F6=Pay   F12=Cancel");
 
         GreenScreen.AddHeader(window.Grid, "REGISTER", "Register");
 
@@ -173,6 +173,24 @@ public class RegisterScreen
             }
         }
 
+        // F4 looks an item up by description, e.g. when its barcode won't
+        // scan, and puts its barcode in the entry field.
+        void Prompt()
+        {
+            window.Message.Clear();
+
+            var item = new ItemSelectScreen(_db, barcodeField.Text ?? "").Run(app);
+
+            if (item is null)
+            {
+                barcodeField.SetFocus();
+                return;
+            }
+
+            barcodeField.Text = item.Barcode;
+            quantityField.SetFocus();
+        }
+
         void Pay()
         {
             if (lines.Count == 0)
@@ -256,7 +274,12 @@ public class RegisterScreen
 
             exitWarned = false;
 
-            if (key == Key.F6)
+            if (key == Key.F4)
+            {
+                key.Handled = true;
+                Prompt();
+            }
+            else if (key == Key.F6)
             {
                 key.Handled = true;
                 Pay();

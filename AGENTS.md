@@ -175,8 +175,8 @@ Build new screens from these pieces instead of styling views one by one:
 - **`Messages`**: the catalog of IBM-style message text. IDs are `TPSnnnn` and
   each screen gets its own range: sign-on `00xx`, menus `01xx`, register
   `02xx`, payment `03xx`, users `04xx`, items `05xx`, change password `06xx`,
-  reports `07xx`, and shared messages `09xx`. Give each new screen the next
-  unused range.
+  reports `07xx`, item inquiry and select `08xx`, and shared messages `09xx`.
+  Give each new screen the next unused range (`10xx` is next).
 
 Every screen follows the same pattern. It's a class whose dependencies come in
 through the constructor, with a `Run(IApplication app)` method. That method
@@ -199,6 +199,11 @@ Other patterns to copy:
   the field to fix.
 - **Lists with an entry line**: `RegisterScreen` puts an `OptionList` under its
   barcode entry, and processes typed options before any new entry on Enter.
+- **F4=Prompt**: `ItemSelectScreen` (SLTITM) is IBM's prompt list for a
+  barcode field. It searches by part of the description or the start of the
+  barcode, takes one `1=Select`, and returns the `Item` (or null on F3/F12).
+  `RegisterScreen` and `ItemInquiryScreen` open it on F4, pass what's in the
+  barcode field as the starting search, and put the result back.
 
 ## Reports and spooled files
 

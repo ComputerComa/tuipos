@@ -3,7 +3,7 @@ namespace tuipos.UI;
 // IBM-style message text. IDs are grouped by screen:
 // TPS00xx sign-on, TPS01xx menus, TPS02xx register, TPS03xx payment,
 // TPS04xx users, TPS05xx items, TPS06xx change password, TPS07xx reports,
-// TPS09xx shared.
+// TPS08xx item inquiry and select, TPS09xx shared.
 public static class Messages
 {
     public const string UserIdRequired = "TPS0001 User must be entered.";
@@ -16,14 +16,11 @@ public static class Messages
 
     public const string SelectionNotValid = "TPS0101 Selection or command not valid.";
 
-    public static string OptionNotAvailable(int option) =>
-        $"TPS0102 Option {option} is not available yet.";
-
     public static string NotAuthorized(string what) =>
         $"TPS0103 Not authorized to {what}.";
 
     public static string ItemNotFound(string barcode) =>
-        $"TPS0201 Item {barcode} not found.";
+        $"TPS0201 Item {barcode} not found. Press F4 to search.";
 
     public const string QuantityNotValid = "TPS0202 Quantity must be 1 to 999.";
 
@@ -131,6 +128,14 @@ public static class Messages
 
     public static string ExportFailed(string reason) =>
         GreenScreen.Clip($"TPS0706 Export failed: {reason}", GreenScreen.Columns - 2);
+
+    public const string InquiryBarcodeRequired =
+        "TPS0801 Type a barcode, or press F4 to search.";
+
+    public static string InquiryItemNotFound(string barcode) =>
+        $"TPS0802 Item {barcode} not found. Press F4 to search.";
+
+    public const string SelectOneItem = "TPS0803 Select only one item.";
 
     public static string OptionNotValid(string option) =>
         $"TPS0901 Option {option} not valid.";
