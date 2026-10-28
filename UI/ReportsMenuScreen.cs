@@ -9,10 +9,12 @@ namespace tuipos.UI;
 // the way you'd check printer output before sending it to the printer.
 public class ReportsMenuScreen
 {
+    // The spool and export folders sit next to pos.db, in the working directory.
+    private const string ExportFolder = "export";
+
     private readonly PosDbContext _db;
     private readonly PosUser _user;
 
-    // The spool folder sits next to pos.db, in the working directory.
     private readonly SpoolStore _spool = new("spool");
 
     public ReportsMenuScreen(PosDbContext db, PosUser user)
@@ -50,6 +52,8 @@ public class ReportsMenuScreen
 
         menu.AddOption(5, "Work with spooled files", s => new WorkWithSpooledFilesScreen(_spool).Run(s.App));
 
+        menu.AddOption(6, "Export item barcodes to PDF", ExportItemBarcodes);
+
         return menu.Run(app);
     }
 
@@ -65,6 +69,25 @@ public class ReportsMenuScreen
         if (dates is { } chosen)
         {
             Spool(selection, build(chosen.From, chosen.To));
+        }
+    }
+
+    private void ExportItemBarcodes(MenuSelection selection)
+    {
+        // A PDF can fail in more ways than a text file (fonts, the PDF
+        // engine), so report it on the message line instead of crashing.
+        try
+        {
+            var file = ItemBarcodeExport.Export(_db, _user.UserId, ExportFolder);
+            string path = Path.GetRelativePath(Directory.GetCurrentDirectory(), file.Path);
+
+            selection.Message.Show(Messages.ItemsExported(file.Count, path));
+        }
+        catch (Exception ex)
+        {
+            // Shorten paths in the error so the reason fits on the line.
+            string folder = Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar;
+            selection.Message.Error(Messages.ExportFailed(ex.Message.Replace(folder, "")));
         }
     }
 

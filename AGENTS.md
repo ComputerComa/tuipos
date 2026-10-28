@@ -15,6 +15,8 @@ storage, or the seeded user; they're deliberate.
 - Terminal.Gui **2.5.0**: the v2 API. Most docs and examples online are for v1 and won't compile here.
 - EF Core 10 with SQLite (`pos.db` in the working directory)
 - `Microsoft.Extensions.Identity.Core`, used only for `PasswordHasher<PosUser>` to hash and verify passwords
+- `QuestPDF` 2026.9.1 for PDF exports, under its free Community license (set in `Program.cs`)
+- `ZXing.Net` 0.16.11, used only to encode Code 128 barcodes for the PDFs
 - `dotnet-ef` 10.0.14 as a local tool (`dotnet-tools.json`)
 
 ## Commands
@@ -46,6 +48,7 @@ To reset local data, delete `pos.db` (it's gitignored) and run the app again.
 | `UI/` | One class per 5250-style screen, plus the shared building blocks described below |
 | `Reports/` | Report layouts (`ReportWriter` plus one class per report) and `SpoolStore`, which saves report output as spooled files |
 | `spool/` | Spooled files at runtime, next to `pos.db` (gitignored) |
+| `export/` | PDF exports at runtime, next to `pos.db` (gitignored) |
 | `Migrations/` | EF Core migrations. Generated code, don't hand-edit. |
 
 Leave the odd file and folder names (`PosBdContext.cs`, `DBSeeder.cs`, `models/`)
@@ -214,6 +217,24 @@ saved as a spooled file, a plain text file in `spool/`, and then shown with
 - **To add a report:** write the report class, then add it to
   `ReportsMenuScreen` with `RunDated(...)` (which shows `ReportPromptScreen`
   for a date or date range) or `Spool(...)` if it takes no input.
+
+### PDF exports
+
+PDFs are for an office printer, so they skip the spool: spooled files stay
+plain text for the Okidata. `ItemBarcodeExport` (Reports option 6) is the
+first one. It writes `export/ITMBAR-yyyyMMdd-HHmmss.pdf`, US Letter, with the
+same page heading as the text reports, and shows the path on the message line
+(`TPS0705`). If the export fails, the message line shows the error (`TPS0706`)
+and the app keeps running.
+
+- Build PDFs with QuestPDF's fluent API. `QuestPDF.Settings.License` must be
+  set before the first PDF, or QuestPDF throws. `Program.cs` sets it at startup.
+- `Barcode.Code128(value, height)` draws a barcode as SVG for QuestPDF's
+  `.Svg()`, including the blank margin scanners need. One SVG unit is one bar
+  width, so `Width(barcode.Width)` gives 1-point bars. Code 128 is used because
+  item barcodes don't always have a valid UPC/EAN check digit.
+- To check a PDF, render it with Ghostscript (`gs -sDEVICE=pnggray -r300`)
+  and look at the pages.
 - **Pop-up windows**: `PaymentWindow` is a plain `Window` smaller than the
   screen, run with `app.Run` from inside the screen below it, which stays
   visible behind. Its dotted IBM border is drawn as full-width label rows added

@@ -489,3 +489,6 @@ pos.db-wal
 
 # Saved report output (spooled files)
 spool/
+
+# PDF exports
+export/

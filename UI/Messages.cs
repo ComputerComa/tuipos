@@ -126,6 +126,12 @@ public static class Messages
     public static string SpooledFilesDeleted(int count) =>
         count == 1 ? "TPS0704 1 spooled file deleted." : $"TPS0704 {count} spooled files deleted.";
 
+    public static string ItemsExported(int count, string path) =>
+        $"TPS0705 {count} {(count == 1 ? "item" : "items")} exported to {path}.";
+
+    public static string ExportFailed(string reason) =>
+        GreenScreen.Clip($"TPS0706 Export failed: {reason}", GreenScreen.Columns - 2);
+
     public static string OptionNotValid(string option) =>
         $"TPS0901 Option {option} not valid.";
 }

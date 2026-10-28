@@ -14,7 +14,9 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.*" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.*" />
+    <PackageReference Include="QuestPDF" Version="2026.9.1" />
     <PackageReference Include="Terminal.Gui" Version="2.5.0" />
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using QuestPDF.Infrastructure;
 using Terminal.Gui.App;
 using tuipos.Data;
 using tuipos.UI;
@@ -7,6 +8,10 @@ using var db = new PosDbContext();
 
 await db.Database.MigrateAsync();
 await DbSeeder.SeedAsync(db);
+
+// QuestPDF refuses to make PDFs until a license is chosen. It's free for
+// hobby use under the Community license.
+QuestPDF.Settings.License = LicenseType.Community;
 
 using IApplication app = Application.Create();
 app.Init();
