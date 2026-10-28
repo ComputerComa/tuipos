@@ -52,7 +52,13 @@ public static class GreenScreen
         return label;
     }
 
-    public static TextField InputField(int x, int y, int length)
+    // An entry field that refuses edits longer than length, or with
+    // characters that allowed rejects (e.g. char.IsAsciiDigit).
+    public static TextField InputField(
+        int x,
+        int y,
+        int length,
+        Func<char, bool>? allowed = null)
     {
         // One extra cell lets the cursor sit after the last character
         // without scrolling the first one out of view.
@@ -64,7 +70,40 @@ public static class GreenScreen
         };
 
         field.SetScheme(Input);
+
+        field.TextChanging += (_, e) =>
+        {
+            string text = e.Result ?? "";
+            e.Handled = text.Length > length
+                || (allowed is not null && !text.All(allowed));
+        };
+
         return field;
+    }
+
+    // $5.99 is stored as 599 and shown as "5.99".
+    public static string Amount(long cents)
+    {
+        return (cents / 100m).ToString("0.00", CultureInfo.InvariantCulture);
+    }
+
+    // Reads a typed amount like "20" or "20.50" as cents.
+    public static bool TryParseAmount(string text, out long cents)
+    {
+        cents = 0;
+
+        if (!decimal.TryParse(
+                text,
+                NumberStyles.AllowDecimalPoint,
+                CultureInfo.InvariantCulture,
+                out decimal amount)
+            || decimal.Round(amount, 2) != amount)
+        {
+            return false;
+        }
+
+        cents = (long)(amount * 100);
+        return true;
     }
 
     // Pads a prompt with ". . ." out to width, e.g. "User  . . . . . .".
@@ -90,11 +129,13 @@ public static class GreenScreen
         int promptWidth,
         string value)
     {
+        // Sized to its text so it can't draw over anything to its right,
+        // like a pop-up window's border.
         View line = new()
         {
             X = x,
             Y = y,
-            Width = Dim.Fill(),
+            Width = promptWidth + 5 + value.Length,
             Height = 1
         };
 

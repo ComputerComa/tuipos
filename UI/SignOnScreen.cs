@@ -37,19 +37,8 @@ public class SignOnScreen
         title.X = Pos.Center();
 
         TextField userIdField = GreenScreen.InputField(FieldX, 7, UserIdLength);
-        TextField pinField = GreenScreen.InputField(FieldX, 8, PinLength);
+        TextField pinField = GreenScreen.InputField(FieldX, 8, PinLength, char.IsAsciiDigit);
         pinField.Secret = true;
-
-        userIdField.TextChanging += (_, e) =>
-        {
-            e.Handled = (e.Result ?? "").Length > UserIdLength;
-        };
-
-        pinField.TextChanging += (_, e) =>
-        {
-            string pin = e.Result ?? "";
-            e.Handled = pin.Length > PinLength || !pin.All(char.IsAsciiDigit);
-        };
 
         void TrySignOn()
         {

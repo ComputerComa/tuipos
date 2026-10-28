@@ -31,6 +31,7 @@ Press F3 or Esc on the sign-on screen to quit.
 | --- | --- |
 | Enter | Submit the screen |
 | F3 | Exit. On the main menu this signs off. On the sign-on screen it quits. |
+| F6 | Pay (on the register) |
 | F9 | Retrieve a previous command (press again to go further back) |
 | F12 | Cancel: clears the command line or goes back a screen |
 | Esc | Quits on the sign-on screen. Everywhere else it acts like F12. |
@@ -41,12 +42,26 @@ Type an option number on the `===>` line and press Enter.
 
 | Option | Screen |
 | --- | --- |
-| 1 | Register *(coming soon)* |
+| 1 | Register |
 | 2 | Item inquiry *(coming soon)* |
 | 3 | Sales journal *(coming soon)* |
 | 4 | Daily totals *(coming soon)* |
 | 5 | Display user information |
 | 90 | Sign off (`SIGNOFF` also works) |
+
+## Register
+
+- Type or scan a barcode and press Enter. Leave the quantity blank for 1.
+  Scanning an item that's already on the sale adds to its line.
+- To remove a line, type `4` next to it and press Enter. Use PageUp and
+  PageDown to move between pages when there are more than 8 lines.
+- Press F6 to pay. Choose 1=Cash, 2=Card or 3=Other. Cash asks for the amount
+  tendered and shows the change due. F12 or Esc cancels the payment and keeps
+  the sale.
+- Press F3 to go back to the menu. If a sale is in progress, press F3 twice to
+  discard it.
+
+Completed sales are saved to the `Sales` and `SaleItems` tables.
 
 ## Data
 
@@ -83,6 +98,6 @@ Migrations/     EF Core migrations
 - [x] Sign-on screen
 - [x] Main menu
 - [x] Display user information
-- [ ] Register (ring up a sale)
+- [x] Register (ring up a sale)
 - [ ] Item inquiry
 - [ ] Sales journal and daily totals

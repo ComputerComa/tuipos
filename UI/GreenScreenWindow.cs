@@ -1,3 +1,4 @@
+using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
@@ -38,5 +39,26 @@ public class GreenScreenWindow : Window
         );
 
         Add(Grid);
+    }
+
+    // Runs the screen with the date and time in the top-right corner,
+    // updated every second.
+    public void RunWithClock(IApplication app)
+    {
+        Label clock = GreenScreen.Text(61, 0, GreenScreen.Timestamp(DateTime.Now));
+        Grid.Add(clock);
+
+        object? timer = app.AddTimeout(TimeSpan.FromSeconds(1), () =>
+        {
+            clock.Text = GreenScreen.Timestamp(DateTime.Now);
+            return true;
+        });
+
+        app.Run(this);
+
+        if (timer is not null)
+        {
+            app.RemoveTimeout(timer);
+        }
     }
 }

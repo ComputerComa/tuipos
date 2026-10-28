@@ -1,6 +1,7 @@
 using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
+using tuipos.Data;
 using tuipos.Models;
 
 namespace tuipos.UI;
@@ -9,10 +10,12 @@ public class MainMenuScreen
 {
     private const int SignOffOption = 90;
 
+    private readonly PosDbContext _db;
     private readonly PosUser _user;
 
-    public MainMenuScreen(PosUser user)
+    public MainMenuScreen(PosDbContext db, PosUser user)
     {
+        _db = db;
         _user = user;
     }
 
@@ -24,8 +27,6 @@ public class MainMenuScreen
         using GreenScreenWindow window = new("F3=Exit   F9=Retrieve   F12=Cancel");
 
         GreenScreen.AddHeader(window.Grid, "MAIN", "TUIPOS Main Menu");
-
-        Label clock = GreenScreen.Text(61, 0, GreenScreen.Timestamp(signedOnAt));
 
         TextField commandField = GreenScreen.InputField(6, 20, 72);
 
@@ -63,6 +64,10 @@ public class MainMenuScreen
             switch (option)
             {
                 case 1:
+                    commandField.Text = "";
+                    new RegisterScreen(_db, _user).Run(app);
+                    break;
+
                 case 2:
                 case 3:
                 case 4:
@@ -119,7 +124,6 @@ public class MainMenuScreen
         };
 
         window.Grid.Add(
-            clock,
             GreenScreen.Text(56, 2, "User:"),
             GreenScreen.Text(66, 2, _user.UserId, GreenScreen.Bright),
             GreenScreen.Text(1, 3, "Select one of the following:"),
@@ -134,18 +138,7 @@ public class MainMenuScreen
             commandField
         );
 
-        object? clockTimer = app.AddTimeout(TimeSpan.FromSeconds(1), () =>
-        {
-            clock.Text = GreenScreen.Timestamp(DateTime.Now);
-            return true;
-        });
-
-        app.Run(window);
-
-        if (clockTimer is not null)
-        {
-            app.RemoveTimeout(clockTimer);
-        }
+        window.RunWithClock(app);
     }
 
     // A numbered menu line, e.g. "     5. Display user information".

@@ -73,7 +73,11 @@ alone unless you're asked to rename them.
   event keeps bubbling up. Buttons raise `Accepted` and `Accepting`, not v1's `Clicked`.
 - To reject an edit, handle `TextField.TextChanging` and set
   `e.Handled = true`. `e.Result` holds the proposed text.
-- `TextField` has no `MaxLength`. Enforce lengths in `TextChanging`.
+- `TextField` has no `MaxLength`. Enforce lengths in `TextChanging` (which
+  `GreenScreen.InputField` already does).
+- Setting `Visible = false` on a field also takes it out of the Tab order.
+- When a `TextField` gets focus again, its text is selected, so the next
+  keystroke replaces it.
 - `app.AddTimeout` returns `object?`. Pass that token to `app.RemoveTimeout`
   once the screen closes.
 - `Terminal.Gui.Drawing.Attribute` collides with `System.Attribute`, so always
@@ -107,12 +111,16 @@ Build new screens from these pieces instead of styling views one by one:
 - **`GreenScreenWindow`**: create one with `new("F3=Exit   F12=Cancel")`. It's a
   borderless black window with a centered 80×24 `Grid` (add your views there, at
   5250 coordinates), a `Message` line on row 22, and the function-key legend on
-  row 23.
+  row 23. Call `window.RunWithClock(app)` instead of `app.Run(window)` to show
+  a live date and time in the top-right corner.
 - **`GreenScreen`** (static) provides:
   - The color schemes: `Normal`, `Bright`, `FunctionKeys`, `Error`, `Input`
   - `Text(x, y, text, scheme?)`
-  - `InputField(x, y, length)`, which adds one extra cell so the cursor fits
-    after the last character
+  - `InputField(x, y, length, allowed?)`, which refuses input longer than
+    `length` or with characters `allowed` rejects (e.g. `char.IsAsciiDigit`),
+    and adds one extra cell so the cursor fits after the last character
+  - `Amount(cents)` and `TryParseAmount(text, out cents)` for showing and
+    reading money
   - `DotLeader(prompt, width)`
   - `OutputLine(x, y, prompt, promptWidth, value)` for read-only
     "prompt `:` value" rows
@@ -121,8 +129,8 @@ Build new screens from these pieces instead of styling views one by one:
 - **`MessageLine`**: call `Show(text)` for information, `Error(text)` for errors,
   and `Clear()` to empty it.
 - **`Messages`**: the catalog of IBM-style message text. IDs are `TPSnnnn` and
-  each screen gets its own range: sign-on uses `00xx`, the main menu uses
-  `01xx`. Give each new screen the next unused range.
+  each screen gets its own range: sign-on `00xx`, main menu `01xx`, register
+  `02xx`, payment `03xx`. Give each new screen the next unused range.
 
 Every screen follows the same pattern. It's a class whose dependencies come in
 through the constructor, with a `Run(IApplication app)` method. That method
@@ -131,6 +139,18 @@ creates a `using GreenScreenWindow window`, adds a header and views, hooks
 opens its screen with `new XScreen(...).Run(app)` inside the command handler.
 That starts a nested session, and calling `app.RequestStop()` in the inner
 screen returns to the menu. `UserInfoScreen` is the simplest example.
+
+Other patterns to copy:
+
+- **Lists** (IBM subfiles): `RegisterScreen` shows a page of rows as fixed
+  label slots, with a 1-character option field beside each row (`4=Remove`).
+  PageUp and PageDown move between pages, and "More..." or "Bottom" sits under
+  the last row. Options are processed before any new entry on Enter.
+- **Pop-up windows**: `PaymentWindow` is a plain `Window` smaller than the
+  screen, run with `app.Run` from inside the screen below it, which stays
+  visible behind. Its dotted IBM border is drawn as full-width label rows added
+  first, so they also blank out the screen underneath. It returns its result
+  the same way `SignOnScreen` does.
 
 ## Code style
 
@@ -150,3 +170,8 @@ The TUI needs a real terminal. `tmux` is available, so you can run
 `dotnet run` in a detached tmux session, use `send-keys` to type input, and use
 `capture-pane -p` to read the screen. That's a better check than assuming a
 layout renders correctly.
+
+The database path is relative to the working directory. To test without
+adding test sales to the real `pos.db`, run the built DLL from a scratch folder
+(`dotnet <repo>/bin/Debug/net10.0/tuipos.dll`). It creates and seeds a fresh
+database there.

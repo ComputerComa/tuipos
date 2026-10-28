@@ -22,7 +22,7 @@ while (true)
         break;
     }
 
-    var mainMenuScreen = new MainMenuScreen(user);
+    var mainMenuScreen = new MainMenuScreen(db, user);
     mainMenuScreen.Run(app);
 
     // When the menu closes, the loop returns to sign-on.
