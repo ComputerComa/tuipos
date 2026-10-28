@@ -30,7 +30,8 @@ dotnet tool restore   # installs dotnet-ef locally
 On startup the app migrates the database and seeds it. The seeder is idempotent,
 so running it again is safe. It only seeds empty tables, so users and items
 deleted in Administration stay deleted. It also makes sure at least one user is
-an administrator, promoting the first user if none is.
+an administrator, promoting the first user if none is, and creates the `BARCODE`
+data area if it's missing (see `StoreBarcodes`).
 
 Seeded sign-on: user `QSECOFR`, password `QSECOFR`.
 
@@ -44,7 +45,8 @@ To reset local data, delete `pos.db` (it's gitignored) and run the app again.
 | `Data/PosBdContext.cs` | `PosDbContext` (the filename has a typo, the class name doesn't) |
 | `Data/DBSeeder.cs` | Idempotent seed data for empty tables: admin user `QSECOFR` and 20 grocery items |
 | `Data/Passwords.cs` | Password rules, plus hashing and verifying them |
-| `models/` | EF entities: `Item`, `PosUser`, `Sale`, `SaleItem` (the folder is lowercase, the namespace is `tuipos.Models`) |
+| `Data/StoreBarcodes.cs` | The store's own barcode series and the `BARCODE` data area behind F6=Next barcode |
+| `models/` | EF entities: `Item`, `PosUser`, `Sale`, `SaleItem`, `DataArea` (the folder is lowercase, the namespace is `tuipos.Models`) |
 | `UI/` | One class per 5250-style screen, plus the shared building blocks described below |
 | `Reports/` | Report layouts (`ReportWriter` plus one class per report) and `SpoolStore`, which saves report output as spooled files |
 | `spool/` | Spooled files at runtime, next to `pos.db` (gitignored) |
@@ -196,7 +198,11 @@ Other patterns to copy:
 - **Prompt screens**: `UserEditScreen` and `ItemEditScreen` handle both Create
   and Change ("Type choices, press Enter."). On Change, the key field (user
   profile or barcode) is shown but can't be edited. Errors put the cursor on
-  the field to fix.
+  the field to fix. On Create Item, F6=Next barcode fills in the next store
+  barcode (12 digits starting `1000000`, like the seeded ones) from
+  `StoreBarcodes.Next`. Saving a new item raises the `BARCODE` data area (a
+  `DataArea` row) to its barcode in the same `SaveChanges`, so a deleted
+  item's barcode is never handed out again.
 - **Lists with an entry line**: `RegisterScreen` puts an `OptionList` under its
   barcode entry, and processes typed options before any new entry on Enter.
 - **F4=Prompt**: `ItemSelectScreen` (SLTITM) is IBM's prompt list for a

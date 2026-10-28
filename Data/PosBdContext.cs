@@ -9,6 +9,7 @@ public class PosDbContext : DbContext
     public DbSet<PosUser> Users => Set<PosUser>();
     public DbSet<Sale> Sales => Set<Sale>();
     public DbSet<SaleItem> SaleItems => Set<SaleItem>();
+    public DbSet<DataArea> DataAreas => Set<DataArea>();
 
     protected override void OnConfiguring(
         DbContextOptionsBuilder optionsBuilder)
@@ -57,6 +58,11 @@ public class PosDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(item => item.ItemId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<DataArea>(entity =>
+        {
+            entity.HasKey(area => area.Name);
         });
     }
 }

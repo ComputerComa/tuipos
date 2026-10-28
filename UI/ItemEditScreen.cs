@@ -35,7 +35,9 @@ public class ItemEditScreen
         bool saved = false;
         bool creating = _existing is null;
 
-        using GreenScreenWindow window = new("F3=Exit   F12=Cancel");
+        using GreenScreenWindow window = new(creating
+            ? "F3=Exit   F6=Next barcode   F12=Cancel"
+            : "F3=Exit   F12=Cancel");
 
         GreenScreen.AddHeader(
             window.Grid,
@@ -103,6 +105,7 @@ public class ItemEditScreen
             if (creating)
             {
                 _db.Items.Add(item);
+                StoreBarcodes.Record(_db, barcode);
             }
 
             _db.SaveChanges();
@@ -131,6 +134,13 @@ public class ItemEditScreen
             {
                 key.Handled = true;
                 app.RequestStop();
+            }
+            else if (key == Key.F6 && creating)
+            {
+                key.Handled = true;
+                window.Message.Clear();
+                barcodeField.Text = StoreBarcodes.Next(_db);
+                descriptionField.SetFocus();
             }
         };
 

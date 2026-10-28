@@ -17,6 +17,19 @@ namespace tuipos.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.14");
 
+            modelBuilder.Entity("tuipos.Models.DataArea", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Value")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Name");
+
+                    b.ToTable("DataAreas");
+                });
+
             modelBuilder.Entity("tuipos.Models.Item", b =>
                 {
                     b.Property<int>("Id")

@@ -12,6 +12,15 @@ public static class DbSeeder
         await SeedItemsAsync(db);
 
         await db.SaveChangesAsync();
+
+        // The seeded items must be saved first, so the data area starts
+        // after their barcodes.
+        StoreBarcodes.EnsureDataArea(db);
+        await db.SaveChangesAsync();
+
+        // The context lives as long as the app, so don't keep the seeded
+        // rows tracked.
+        db.ChangeTracker.Clear();
     }
 
     // Only seeds an empty table, so users deleted in WRKUSR stay deleted.
