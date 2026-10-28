@@ -103,6 +103,12 @@ alone unless you're asked to rename them.
   once the screen closes.
 - `Terminal.Gui.Drawing.Attribute` collides with `System.Attribute`, so always
   write it fully qualified.
+- Terminal.Gui 2.5.0 crashes with a `NullReferenceException` in `Key..ctor` on
+  any `ESC [ n ~` key missing from its table, including F13-F20 (`ESC[25~` to
+  `ESC[34~`). `FunctionKeyPatch.Apply(app)`, called in `Program.cs` right after
+  `app.Init()`, adds F13-F20 and rxvt's Home/End (7 and 8) to the table through
+  reflection. After a Terminal.Gui upgrade, send those raw sequences through
+  tmux (`send-keys -l`) and remove the patch if the library handles them.
 - Useful namespaces: `Terminal.Gui.App`, `Terminal.Gui.Views`,
   `Terminal.Gui.Drawing`, `Terminal.Gui.Input`, `Terminal.Gui.ViewBase`.
 - If you're unsure an API exists, check the XML docs at

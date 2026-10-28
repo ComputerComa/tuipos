@@ -16,6 +16,9 @@ QuestPDF.Settings.License = LicenseType.Community;
 using IApplication app = Application.Create();
 app.Init();
 
+// Without this, pressing F13-F20 crashes Terminal.Gui 2.5.0.
+FunctionKeyPatch.Apply(app);
+
 while (true)
 {
     var signOnScreen = new SignOnScreen(db);
