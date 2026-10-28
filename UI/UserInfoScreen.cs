@@ -34,7 +34,7 @@ public class UserInfoScreen
         };
 
         window.Grid.Add(
-            GreenScreen.OutputLine(1, 4, "User ID", PromptWidth, _user.UserId),
+            GreenScreen.OutputLine(1, 4, "User profile", PromptWidth, _user.UserId),
             GreenScreen.OutputLine(1, 5, "First name", PromptWidth, _user.FirstName),
             GreenScreen.OutputLine(1, 6, "Last name", PromptWidth, _user.LastName),
             GreenScreen.OutputLine(

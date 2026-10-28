@@ -6,7 +6,7 @@ Guidance for AI coding agents working in this repository.
 
 TUIPOS is a hobby point-of-sale app that runs in the terminal and imitates the
 look and feel of an IBM i (AS/400) 5250 green-screen. It's built for fun, not
-for production. Don't add warnings or hardening work about credentials, PIN
+for production. Don't add warnings or hardening work about credentials, password
 storage, or the seeded user; they're deliberate.
 
 ## Stack
@@ -14,7 +14,7 @@ storage, or the seeded user; they're deliberate.
 - .NET 10 / C# console app (`tuipos.csproj`), nullable and implicit usings enabled
 - Terminal.Gui **2.5.0**: the v2 API. Most docs and examples online are for v1 and won't compile here.
 - EF Core 10 with SQLite (`pos.db` in the working directory)
-- `Microsoft.Extensions.Identity.Core`, used only for `PasswordHasher<PosUser>` to hash and verify PINs
+- `Microsoft.Extensions.Identity.Core`, used only for `PasswordHasher<PosUser>` to hash and verify passwords
 - `dotnet-ef` 10.0.14 as a local tool (`dotnet-tools.json`)
 
 ## Commands
@@ -30,7 +30,7 @@ so running it again is safe. It only seeds empty tables, so users and items
 deleted in Administration stay deleted. It also makes sure at least one user is
 an administrator, promoting the first user if none is.
 
-Seeded sign-on: user `0000`, PIN `123456`.
+Seeded sign-on: user `QSECOFR`, password `QSECOFR`.
 
 To reset local data, delete `pos.db` (it's gitignored) and run the app again.
 
@@ -40,7 +40,8 @@ To reset local data, delete `pos.db` (it's gitignored) and run the app again.
 | --- | --- |
 | `Program.cs` | Entry point: migrates and seeds, creates the `IApplication`, then runs a sign-on → main menu loop |
 | `Data/PosBdContext.cs` | `PosDbContext` (the filename has a typo, the class name doesn't) |
-| `Data/DBSeeder.cs` | Idempotent seed data for empty tables: admin user `0000` and 20 grocery items |
+| `Data/DBSeeder.cs` | Idempotent seed data for empty tables: admin user `QSECOFR` and 20 grocery items |
+| `Data/Passwords.cs` | Password rules, plus hashing and verifying them |
 | `models/` | EF entities: `Item`, `PosUser`, `Sale`, `SaleItem` (the folder is lowercase, the namespace is `tuipos.Models`) |
 | `UI/` | One class per 5250-style screen, plus the shared building blocks described below |
 | `Reports/` | Report layouts (`ReportWriter` plus one class per report) and `SpoolStore`, which saves report output as spooled files |
@@ -61,6 +62,11 @@ alone unless you're asked to rename them.
   survives later catalog edits. Keep it that way.
 - `PosUser.IsAdmin` controls access to the Administration menu. Keep at least
   one administrator: WRKUSR and CHGUSR both refuse to remove the last one.
+- Sign-on works like IBM i. User profiles are up to 10 characters (letters,
+  digits, `$ # @ _`, not starting with a digit or `_`) and stored in uppercase.
+  Passwords are 6 to 10 characters and not case-sensitive, so always hash and
+  verify them through `Passwords`, which uppercases them. The hash lives in
+  `PosUser.PinHash`, a column name left over from PIN sign-on.
 - The `PosDbContext` lives for the whole app. Read with `AsNoTracking()`, and
   call `ChangeTracker.Clear()` after saving (or use `ExecuteUpdate` /
   `ExecuteDelete`), so entities don't stay tracked between screens.
@@ -128,9 +134,11 @@ Build new screens from these pieces instead of styling views one by one:
 - **`GreenScreen`** (static) provides:
   - The color schemes: `Normal`, `Bright`, `FunctionKeys`, `Error`, `Input`
   - `Text(x, y, text, scheme?)`
-  - `InputField(x, y, length, allowed?)`, which refuses input longer than
-    `length` or with characters `allowed` rejects (e.g. `char.IsAsciiDigit`),
-    and adds one extra cell so the cursor fits after the last character
+  - `InputField(x, y, length, allowed?, monocase?)`, which refuses input longer
+    than `length` or with characters `allowed` rejects (e.g. `char.IsAsciiDigit`),
+    and adds one extra cell so the cursor fits after the last character.
+    `monocase: true` capitalizes letters as they're typed, as for user profiles.
+  - `IsNameChar(c)` and `IsValidName(text)` for IBM i names like user profiles
   - `Amount(cents)` and `TryParseAmount(text, out cents)` for showing and
     reading money
   - `DotLeader(prompt, width)`
@@ -157,7 +165,7 @@ Build new screens from these pieces instead of styling views one by one:
   and `Clear()` to empty it.
 - **`Messages`**: the catalog of IBM-style message text. IDs are `TPSnnnn` and
   each screen gets its own range: sign-on `00xx`, menus `01xx`, register
-  `02xx`, payment `03xx`, users `04xx`, items `05xx`, change PIN `06xx`,
+  `02xx`, payment `03xx`, users `04xx`, items `05xx`, change password `06xx`,
   reports `07xx`, and shared messages `09xx`. Give each new screen the next
   unused range.
 
@@ -177,9 +185,9 @@ Other patterns to copy:
   option first, then handle 2=Change in order down the page, then confirm and
   run 4=Delete.
 - **Prompt screens**: `UserEditScreen` and `ItemEditScreen` handle both Create
-  and Change ("Type choices, press Enter."). On Change, the key field (user ID
-  or barcode) is shown but can't be edited. Errors put the cursor on the field
-  to fix.
+  and Change ("Type choices, press Enter."). On Change, the key field (user
+  profile or barcode) is shown but can't be edited. Errors put the cursor on
+  the field to fix.
 - **Lists with an entry line**: `RegisterScreen` puts an `OptionList` under its
   barcode entry, and processes typed options before any new entry on Enter.
 

@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Terminal.Gui.App;
 using Terminal.Gui.Input;
@@ -12,7 +11,6 @@ namespace tuipos.UI;
 public class SignOnScreen
 {
     private const int UserIdLength = 10;
-    private const int PinLength = 6;
 
     // Prompts end at column 49 and fields start at column 53.
     private const int PromptX = 17;
@@ -36,17 +34,17 @@ public class SignOnScreen
         Label title = GreenScreen.Text(0, 0, "Sign On", GreenScreen.Bright);
         title.X = Pos.Center();
 
-        TextField userIdField = GreenScreen.InputField(FieldX, 7, UserIdLength);
-        TextField pinField = GreenScreen.InputField(FieldX, 8, PinLength, char.IsAsciiDigit);
-        pinField.Secret = true;
+        TextField userIdField = GreenScreen.InputField(FieldX, 7, UserIdLength, monocase: true);
+        TextField passwordField = GreenScreen.InputField(FieldX, 8, Passwords.MaxLength, Passwords.IsAllowed);
+        passwordField.Secret = true;
 
         void TrySignOn()
         {
-            string userId = (userIdField.Text ?? "").Trim();
-            string pin = pinField.Text ?? "";
+            string userId = (userIdField.Text ?? "").Trim().ToUpperInvariant();
+            string password = passwordField.Text ?? "";
 
-            // Clear the PIN field after each attempt.
-            pinField.Text = "";
+            // Clear the password field after each attempt.
+            passwordField.Text = "";
 
             if (userId.Length == 0)
             {
@@ -55,9 +53,10 @@ public class SignOnScreen
                 return;
             }
 
+            // Users created before profiles were uppercase may be stored in lowercase.
             var user = _db.Users
                 .AsNoTracking()
-                .FirstOrDefault(u => u.UserId == userId);
+                .FirstOrDefault(u => u.UserId.ToUpper() == userId);
 
             if (user is null)
             {
@@ -66,18 +65,10 @@ public class SignOnScreen
                 return;
             }
 
-            var hasher = new PasswordHasher<PosUser>();
-
-            var result = hasher.VerifyHashedPassword(
-                user,
-                user.PinHash,
-                pin
-            );
-
-            if (result == PasswordVerificationResult.Failed)
+            if (!Passwords.Verify(user, password))
             {
-                window.Message.Error(Messages.PinNotCorrect(userId));
-                pinField.SetFocus();
+                window.Message.Error(Messages.PasswordNotCorrect(userId));
+                passwordField.SetFocus();
                 return;
             }
 
@@ -89,19 +80,19 @@ public class SignOnScreen
         {
             e.Handled = true;
 
-            // Enter on a filled-in user ID moves to the PIN like Field Exit.
-            if ((pinField.Text ?? "").Length == 0
+            // Enter on a filled-in user moves to the password like Field Exit.
+            if ((passwordField.Text ?? "").Length == 0
                 && (userIdField.Text ?? "").Trim().Length > 0)
             {
                 window.Message.Clear();
-                pinField.SetFocus();
+                passwordField.SetFocus();
                 return;
             }
 
             TrySignOn();
         };
 
-        pinField.Accepting += (_, e) =>
+        passwordField.Accepting += (_, e) =>
         {
             e.Handled = true;
             TrySignOn();
@@ -121,10 +112,10 @@ public class SignOnScreen
             GreenScreen.OutputLine(48, 2, "System", 17, GreenScreen.SystemName),
             GreenScreen.OutputLine(48, 3, "Subsystem", 17, "QPOS"),
             GreenScreen.OutputLine(48, 4, "Display", 17, "QPADEV0001"),
-            GreenScreen.Text(PromptX, 7, GreenScreen.DotLeader("User ID", PromptWidth)),
-            GreenScreen.Text(PromptX, 8, GreenScreen.DotLeader("PIN", PromptWidth)),
+            GreenScreen.Text(PromptX, 7, GreenScreen.DotLeader("User", PromptWidth)),
+            GreenScreen.Text(PromptX, 8, GreenScreen.DotLeader("Password", PromptWidth)),
             userIdField,
-            pinField,
+            passwordField,
             GreenScreen.Text(53, 20, "(C) COPYRIGHT TUIPOS 2026.")
         );
 

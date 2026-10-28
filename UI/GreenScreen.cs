@@ -54,11 +54,13 @@ public static class GreenScreen
 
     // An entry field that refuses edits longer than length, or with
     // characters that allowed rejects (e.g. char.IsAsciiDigit).
+    // Monocase fields turn letters into capitals as they're typed.
     public static TextField InputField(
         int x,
         int y,
         int length,
-        Func<char, bool>? allowed = null)
+        Func<char, bool>? allowed = null,
+        bool monocase = false)
     {
         // One extra cell lets the cursor sit after the last character
         // without scrolling the first one out of view.
@@ -76,9 +78,28 @@ public static class GreenScreen
             string text = e.Result ?? "";
             e.Handled = text.Length > length
                 || (allowed is not null && !text.All(allowed));
+
+            if (!e.Handled && monocase)
+            {
+                e.Result = text.ToUpperInvariant();
+            }
         };
 
         return field;
+    }
+
+    // IBM i object names, like user profiles, use letters, digits and $ # @ _.
+    public static bool IsNameChar(char c)
+    {
+        return char.IsAsciiLetterOrDigit(c) || c is '$' or '#' or '@' or '_';
+    }
+
+    // The first character of a name can't be a digit or an underscore.
+    public static bool IsValidName(string name)
+    {
+        return name.Length > 0
+            && (char.IsAsciiLetter(name[0]) || name[0] is '$' or '#' or '@')
+            && name.All(IsNameChar);
     }
 
     // $5.99 is stored as 599 and shown as "5.99".

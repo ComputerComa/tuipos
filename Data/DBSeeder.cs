@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using tuipos.Models;
 
@@ -23,16 +22,16 @@ public static class DbSeeder
             return;
         }
 
+        // IBM i ships the security officer with its name as its password.
         var user = new PosUser
         {
-            UserId = "0000",
-            FirstName = "Local",
-            LastName = "Admin",
+            UserId = "QSECOFR",
+            FirstName = "Security",
+            LastName = "Officer",
             IsAdmin = true
         };
 
-        var hasher = new PasswordHasher<PosUser>();
-        user.PinHash = hasher.HashPassword(user, "123456");
+        user.PinHash = Passwords.Hash(user, "QSECOFR");
 
         db.Users.Add(user);
     }

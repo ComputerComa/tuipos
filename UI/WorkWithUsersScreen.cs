@@ -13,7 +13,7 @@ public class WorkWithUsersScreen
     private const int RowsPerPage = 12;
 
     private static readonly string Headings =
-        $"{"User ID",-10}  {"First name",-20}  {"Last name",-20}  Admin";
+        $"{"User",-10}  {"First name",-20}  {"Last name",-20}  Admin";
 
     private readonly PosDbContext _db;
     private readonly PosUser _signedOnUser;

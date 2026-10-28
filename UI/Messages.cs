@@ -2,17 +2,17 @@ namespace tuipos.UI;
 
 // IBM-style message text. IDs are grouped by screen:
 // TPS00xx sign-on, TPS01xx menus, TPS02xx register, TPS03xx payment,
-// TPS04xx users, TPS05xx items, TPS06xx change PIN, TPS07xx reports,
+// TPS04xx users, TPS05xx items, TPS06xx change password, TPS07xx reports,
 // TPS09xx shared.
 public static class Messages
 {
-    public const string UserIdRequired = "TPS0001 User ID must be entered.";
+    public const string UserIdRequired = "TPS0001 User must be entered.";
 
     public static string UserNotFound(string userId) =>
         $"TPS0002 User {userId} does not exist.";
 
-    public static string PinNotCorrect(string userId) =>
-        $"TPS0003 PIN not correct for user {userId}.";
+    public static string PasswordNotCorrect(string userId) =>
+        $"TPS0003 Password not correct for user profile {userId}.";
 
     public const string SelectionNotValid = "TPS0101 Selection or command not valid.";
 
@@ -71,7 +71,7 @@ public static class Messages
     public const string LastAdmin =
         "TPS0406 At least one user must be an administrator.";
 
-    public const string NewUserIdRequired = "TPS0410 User ID must be entered.";
+    public const string NewUserIdRequired = "TPS0410 User profile must be entered.";
 
     public static string UserExists(string userId) =>
         $"TPS0411 User {userId} already exists.";
@@ -80,9 +80,12 @@ public static class Messages
 
     public const string LastNameRequired = "TPS0413 Last name must be entered.";
 
-    public const string PinNotValid = "TPS0414 PIN must be 6 digits.";
+    public const string PasswordNotValid = "TPS0414 Password must be 6 to 10 characters.";
 
     public const string AdminNotValid = "TPS0415 Administrator must be *YES or *NO.";
+
+    public const string UserProfileNotValid =
+        "TPS0416 User profile must start with a letter, $, # or @.";
 
     public static string ItemCreated(string barcode) =>
         $"TPS0501 Item {barcode} created.";
@@ -102,16 +105,16 @@ public static class Messages
 
     public const string PriceNotValid = "TPS0513 Type a price above zero, like 3.99.";
 
-    public const string CurrentPinNotCorrect = "TPS0601 Current PIN not correct.";
+    public const string CurrentPasswordNotCorrect = "TPS0601 Current password not correct.";
 
-    public const string NewPinNotValid = "TPS0602 New PIN must be 6 digits.";
+    public const string NewPasswordNotValid = "TPS0602 New password must be 6 to 10 characters.";
 
-    public const string NewPinsDontMatch = "TPS0603 New PIN entries don't match.";
+    public const string NewPasswordsDontMatch = "TPS0603 New password entries don't match.";
 
-    public const string NewPinSameAsCurrent =
-        "TPS0604 New PIN must be different from the current PIN.";
+    public const string NewPasswordSameAsCurrent =
+        "TPS0604 New password must be different from the current password.";
 
-    public const string PinChanged = "TPS0605 PIN changed.";
+    public const string PasswordChanged = "TPS0605 Password changed.";
 
     public static string SpooledFileCreated(int number, string name, int pages) =>
         $"TPS0701 Spooled file {number} {name} created, {pages} {(pages == 1 ? "page" : "pages")}.";

@@ -22,11 +22,11 @@ public class AdminMenuScreen
 
         menu.AddOption(1, "Work with users", s => new WorkWithUsersScreen(_db, _user).Run(s.App));
         menu.AddOption(2, "Work with items", s => new WorkWithItemsScreen(_db).Run(s.App));
-        menu.AddOption(3, "Change PIN", s =>
+        menu.AddOption(3, "Change password", s =>
         {
-            if (new ChangePinScreen(_db, _user).Run(s.App))
+            if (new ChangePasswordScreen(_db, _user).Run(s.App))
             {
-                s.Message.Show(Messages.PinChanged);
+                s.Message.Show(Messages.PasswordChanged);
             }
         });
         menu.AddOption(4, "Display system status", s => new SystemStatusScreen(_db).Run(s.App));

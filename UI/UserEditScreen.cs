@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Identity;
 using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
@@ -12,12 +11,11 @@ public class UserEditScreen
 {
     private const int UserIdLength = 10;
     private const int NameLength = 20;
-    private const int PinLength = 6;
 
     private const int PromptX = 2;
     private const int PromptWidth = 28;
     private const int FieldX = 33;
-    private const int HintX = 43;
+    private const int HintX = 45;
 
     private readonly PosDbContext _db;
     private readonly PosUser? _existing;
@@ -45,13 +43,13 @@ public class UserEditScreen
             creating ? "Create User" : "Change User"
         );
 
-        TextField userIdField = GreenScreen.InputField(FieldX, 5, UserIdLength, c => !char.IsWhiteSpace(c));
+        TextField userIdField = GreenScreen.InputField(FieldX, 5, UserIdLength, GreenScreen.IsNameChar, monocase: true);
         TextField firstNameField = GreenScreen.InputField(FieldX, 6, NameLength);
         TextField lastNameField = GreenScreen.InputField(FieldX, 7, NameLength);
-        TextField pinField = GreenScreen.InputField(FieldX, 8, PinLength, char.IsAsciiDigit);
+        TextField passwordField = GreenScreen.InputField(FieldX, 8, Passwords.MaxLength, Passwords.IsAllowed);
         TextField adminField = GreenScreen.InputField(FieldX, 9, 4, c => char.IsAsciiLetter(c) || c == '*');
 
-        pinField.Secret = true;
+        passwordField.Secret = true;
 
         firstNameField.Text = _existing?.FirstName ?? "";
         lastNameField.Text = _existing?.LastName ?? "";
@@ -67,10 +65,10 @@ public class UserEditScreen
         {
             window.Message.Clear();
 
-            string userId = _existing?.UserId ?? (userIdField.Text ?? "").Trim();
+            string userId = _existing?.UserId ?? (userIdField.Text ?? "").Trim().ToUpperInvariant();
             string firstName = (firstNameField.Text ?? "").Trim();
             string lastName = (lastNameField.Text ?? "").Trim();
-            string pin = pinField.Text ?? "";
+            string password = passwordField.Text ?? "";
             bool? isAdmin = GreenScreen.ParseYesNo(adminField.Text ?? "");
 
             if (creating && userId.Length == 0)
@@ -79,7 +77,14 @@ public class UserEditScreen
                 return;
             }
 
-            if (creating && _db.Users.Any(u => u.UserId == userId))
+            if (creating && !GreenScreen.IsValidName(userId))
+            {
+                Fail(userIdField, Messages.UserProfileNotValid);
+                return;
+            }
+
+            // Users created before profiles were uppercase may be stored in lowercase.
+            if (creating && _db.Users.Any(u => u.UserId.ToUpper() == userId))
             {
                 Fail(userIdField, Messages.UserExists(userId));
                 return;
@@ -97,11 +102,11 @@ public class UserEditScreen
                 return;
             }
 
-            // A new user needs a PIN; a blank PIN on Change keeps the old one.
-            if ((creating || pin.Length > 0) && pin.Length != PinLength)
+            // A new user needs a password; a blank one on Change keeps the old one.
+            if ((creating || password.Length > 0) && !Passwords.IsValid(password))
             {
-                pinField.Text = "";
-                Fail(pinField, Messages.PinNotValid);
+                passwordField.Text = "";
+                Fail(passwordField, Messages.PasswordNotValid);
                 return;
             }
 
@@ -127,9 +132,9 @@ public class UserEditScreen
             user.LastName = lastName;
             user.IsAdmin = isAdmin.Value;
 
-            if (pin.Length > 0)
+            if (password.Length > 0)
             {
-                user.PinHash = new PasswordHasher<PosUser>().HashPassword(user, pin);
+                user.PinHash = Passwords.Hash(user, password);
             }
 
             if (creating)
@@ -148,7 +153,7 @@ public class UserEditScreen
             app.RequestStop();
         }
 
-        foreach (var field in new[] { userIdField, firstNameField, lastNameField, pinField, adminField })
+        foreach (var field in new[] { userIdField, firstNameField, lastNameField, passwordField, adminField })
         {
             field.Accepting += (_, e) =>
             {
@@ -168,10 +173,10 @@ public class UserEditScreen
 
         window.Grid.Add(
             GreenScreen.Text(1, 3, "Type choices, press Enter."),
-            GreenScreen.Text(PromptX, 5, GreenScreen.DotLeader("User ID", PromptWidth))
+            GreenScreen.Text(PromptX, 5, GreenScreen.DotLeader("User profile", PromptWidth))
         );
 
-        // The user ID is the key, so Change shows it but doesn't let it change.
+        // The user profile is the key, so Change shows it but doesn't let it change.
         if (creating)
         {
             window.Grid.Add(userIdField);
@@ -186,9 +191,9 @@ public class UserEditScreen
             firstNameField,
             GreenScreen.Text(PromptX, 7, GreenScreen.DotLeader("Last name", PromptWidth)),
             lastNameField,
-            GreenScreen.Text(PromptX, 8, GreenScreen.DotLeader(creating ? "PIN" : "New PIN", PromptWidth)),
-            pinField,
-            GreenScreen.Text(HintX, 8, creating ? "6 digits" : "Leave blank to keep", GreenScreen.FunctionKeys),
+            GreenScreen.Text(PromptX, 8, GreenScreen.DotLeader(creating ? "Password" : "New password", PromptWidth)),
+            passwordField,
+            GreenScreen.Text(HintX, 8, creating ? "6 to 10 characters" : "Leave blank to keep", GreenScreen.FunctionKeys),
             GreenScreen.Text(PromptX, 9, GreenScreen.DotLeader("Administrator", PromptWidth)),
             adminField,
             GreenScreen.Text(HintX, 9, "*YES, *NO", GreenScreen.FunctionKeys)

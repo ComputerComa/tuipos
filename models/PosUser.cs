@@ -4,13 +4,13 @@ public class PosUser
 {
     public int Id { get; set; }
 
-    // The user-facing ID entered at login.
+    // The user profile name entered at sign-on, like QSECOFR.
     public string UserId { get; set; } = "";
 
     public string FirstName { get; set; } = "";
     public string LastName { get; set; } = "";
 
-    // Store a password hash here, never the six-digit PIN itself.
+    // The password hash. The column kept its name from when sign-on used PINs.
     public string PinHash { get; set; } = "";
 
     // Administrators can open the Administration menu.
