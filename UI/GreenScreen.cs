@@ -1,0 +1,154 @@
+using System.Globalization;
+using System.Text;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
+
+namespace tuipos.UI;
+
+// Shared colors and layout helpers for 5250-style screens.
+public static class GreenScreen
+{
+    public const int Columns = 80;
+    public const int Rows = 24;
+
+    public const string SystemName = "TUIPOS";
+
+    // The bottom two lines of the grid.
+    public const int MessageRow = 22;
+    public const int FunctionKeyRow = 23;
+
+    public static readonly Scheme Normal = Uniform(Color.BrightGreen);
+    public static readonly Scheme Bright = Uniform(Color.White);
+    public static readonly Scheme FunctionKeys = Uniform(Color.BrightBlue);
+    public static readonly Scheme Error = Uniform(Color.BrightRed);
+
+    // Input fields are underlined, like 5250 entry fields.
+    public static readonly Scheme Input = new()
+    {
+        Normal = Attr(Color.BrightGreen, TextStyle.Underline),
+        Editable = Attr(Color.BrightGreen, TextStyle.Underline),
+        Active = Attr(Color.White, TextStyle.Underline),
+        Focus = Attr(Color.White, TextStyle.Underline),
+        Highlight = Attr(Color.White, TextStyle.Reverse),
+        ReadOnly = Attr(Color.BrightGreen),
+        Disabled = Attr(Color.BrightGreen)
+    };
+
+    public static Label Text(int x, int y, string text, Scheme? scheme = null)
+    {
+        Label label = new()
+        {
+            X = x,
+            Y = y,
+            Text = text
+        };
+
+        if (scheme is not null)
+        {
+            label.SetScheme(scheme);
+        }
+
+        return label;
+    }
+
+    public static TextField InputField(int x, int y, int length)
+    {
+        // One extra cell lets the cursor sit after the last character
+        // without scrolling the first one out of view.
+        TextField field = new()
+        {
+            X = x,
+            Y = y,
+            Width = length + 1
+        };
+
+        field.SetScheme(Input);
+        return field;
+    }
+
+    // Pads a prompt with ". . ." out to width, e.g. "User  . . . . . .".
+    // Dots sit on the same columns for every prompt of the same width.
+    public static string DotLeader(string prompt, int width)
+    {
+        var text = new StringBuilder(prompt);
+
+        for (int column = prompt.Length; column < width; column++)
+        {
+            bool isDotColumn = (width - 1 - column) % 2 == 0;
+            text.Append(isDotColumn && column > prompt.Length ? '.' : ' ');
+        }
+
+        return text.ToString();
+    }
+
+    // A read-only "Prompt . . . . :   value" line.
+    public static View OutputLine(
+        int x,
+        int y,
+        string prompt,
+        int promptWidth,
+        string value)
+    {
+        View line = new()
+        {
+            X = x,
+            Y = y,
+            Width = Dim.Fill(),
+            Height = 1
+        };
+
+        line.Add(
+            Text(0, 0, DotLeader(prompt, promptWidth) + " :"),
+            Text(promptWidth + 5, 0, value, Bright)
+        );
+
+        return line;
+    }
+
+    // IBM i style date and time, e.g. "10/27/26  17:45:12".
+    public static string Timestamp(DateTime value)
+    {
+        return value.ToString("MM/dd/yy  HH:mm:ss", CultureInfo.InvariantCulture);
+    }
+
+    // Screen ID on the left, title centered, system name on the right.
+    public static void AddHeader(View grid, string screenId, string title)
+    {
+        Label titleLabel = Text(0, 0, title, Bright);
+        titleLabel.X = Pos.Center();
+
+        grid.Add(
+            Text(1, 0, screenId),
+            titleLabel,
+            Text(56, 1, "System:"),
+            Text(66, 1, SystemName, Bright)
+        );
+    }
+
+    private static Terminal.Gui.Drawing.Attribute Attr(
+        Color foreground,
+        TextStyle style = TextStyle.None)
+    {
+        return new Terminal.Gui.Drawing.Attribute(foreground, Color.Black, style);
+    }
+
+    private static Scheme Uniform(Color foreground)
+    {
+        var attribute = Attr(foreground);
+
+        return new Scheme
+        {
+            Normal = attribute,
+            HotNormal = attribute,
+            Focus = attribute,
+            HotFocus = attribute,
+            Active = attribute,
+            HotActive = attribute,
+            Highlight = attribute,
+            Editable = attribute,
+            ReadOnly = attribute,
+            Disabled = attribute
+        };
+    }
+}

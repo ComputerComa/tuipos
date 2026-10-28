@@ -1,17 +1,29 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Terminal.Gui.App;
 using tuipos.Data;
+using tuipos.UI;
 
 using var db = new PosDbContext();
 
-// The database must have the current schema before seeding.
 await db.Database.MigrateAsync();
-
 await DbSeeder.SeedAsync(db);
 
-Console.WriteLine("Database seeded.");
+using IApplication app = Application.Create();
+app.Init();
 
-var itemCount = await db.Items.CountAsync();
-var userCount = await db.Users.CountAsync();
+while (true)
+{
+    var signOnScreen = new SignOnScreen(db);
+    var user = signOnScreen.Run(app);
 
-Console.WriteLine($"Users: {userCount}");
-Console.WriteLine($"Items: {itemCount}");
+    // Esc on the sign-on screen exits the application.
+    if (user is null)
+    {
+        break;
+    }
+
+    var mainMenuScreen = new MainMenuScreen(user);
+    mainMenuScreen.Run(app);
+
+    // When the menu closes, the loop returns to sign-on.
+}
